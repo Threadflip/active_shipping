@@ -359,4 +359,40 @@ class RemoteUPSTest < Minitest::Test
   def test_maximum_address_field_length
     assert_equal 35, @carrier.maximum_address_field_length
   end
+
+  def test_surepost_rates_less_than_one_lb
+    response = @carrier.find_rates(
+      location_fixtures[:new_york_with_name],
+      location_fixtures[:real_home_as_residential],
+      package_fixtures.values_at(:small_half_pound),
+      {
+        :service => "92",
+        :test => true
+      }
+    )
+
+    assert response.success?
+    refute response.rates.empty?
+    assert_equal ["UPS SurePost (USPS) < 1lb"], response.rates.map(&:service_name)
+  end
+
+  def test_obtain_surpost_less_than_one_lb_shipping_label
+    response = @carrier.create_shipment(
+      location_fixtures[:beverly_hills],
+      location_fixtures[:new_york_with_name],
+      package_fixtures.values_at(:small_half_pound),
+      {
+        :test => true,
+        :service_code => "92"
+      }
+    )
+
+    assert response.success?
+
+    # All behavior specific to how a LabelResponse behaves in the
+    # context of UPS label data is a matter for unit tests.  If
+    # the data changes substantially, the create_shipment
+    # ought to raise an exception and this test will fail.
+    assert_instance_of ActiveShipping::LabelResponse, response
+  end
 end
